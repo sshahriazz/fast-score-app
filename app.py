@@ -4,6 +4,8 @@ from categorize_skills import skills_category
 from scanner.pdfanalyzer import find_social_media_links, find_degree, pdf_reader, find_summary, parse_resume_data, parse_resume_data, delete_files
 import aiofiles
 import os
+import uvicorn
+
 app = FastAPI()
 
 origins = [
@@ -278,3 +280,7 @@ async def root(file: UploadFile):
         "score_data": score_data,
         "summary": summary,
     }
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host='0.0.0.0', port=8000)
