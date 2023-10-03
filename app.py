@@ -88,9 +88,14 @@ async def root(file: UploadFile):
     }
     summary = ""
 
+    creation_and_modification_date_difference = os.path.getctime(
+        filepath)
+
     if (file):
         file_information["fileName"] = file.filename
         file_information["modified_date"] = ''
+        file_information["content_type"] = file.content_type
+        # in months
         file_information["mod_gap"] = ''
         file_information["size"] = round(float(file.size) / 1024 / 1024, 2)
         file_information["content_type"] = file.content_type

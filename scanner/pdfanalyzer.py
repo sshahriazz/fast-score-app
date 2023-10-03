@@ -59,14 +59,21 @@ def find_summary(input_text):
 
 # Find the email address in the input text using regex
     email_match = re.search(email_pattern, input_text.lower())
-    if email_match:
+    print("email_match", input_text)
+    if email_match is not None:
         email_address = email_match.group(0)
 
         # Find the index of the email address in the input text
-        email_index = input_text.index(email_address)
+        email_index = input_text.lower().find(email_address)
 
         # Extract the text after the email address until the start of "WORK EXPERIENCES" section
+        if (email_index == -1):
+            return 'InvalidEmail'
+
         summary_text = input_text[email_index + len(email_address):]
+
+        if len(summary_text) < 25:
+            return 'InvalidSummary'
 
         # Use regex to find the start of "WORK EXPERIENCES" section (all capital letter sentence)
         work_exp_start = re.search(r'\n[A-Z\s]+\n', summary_text)
@@ -86,7 +93,6 @@ def find_summary(input_text):
 
 
 def parse_resume_data(file):
-    print("file path", file)
     try:
         resume_data = ResumeParser(os.path.join(file)).get_extracted_data()
     except Exception as error:
