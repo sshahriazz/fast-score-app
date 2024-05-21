@@ -1,9 +1,3 @@
-nltk==3.8.1
-pdfminer3==2018.12.3.0
-pdfplumber==0.10.2
-pdfreader==0.1.12
-spacy==2.3.5
-django-mathfilters
-pyresparser
-python-multipart
-aiofiles
+pymupdf
+openai
+fastapi
