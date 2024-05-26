@@ -76,8 +76,8 @@ def create_upload_file(file: UploadFile):
     pdf_content, presentation = get_content_from_pdf(saved_filepath)
     os.remove(saved_filepath)
 
-    # pdf_parsed_info = json.loads(get_formatted_resume_content(pdf_content))
-    pdf_parsed_info = dict()
+    pdf_parsed_info = json.loads(get_formatted_resume_content(pdf_content))
+    # pdf_parsed_info = dict()
     pdf_parsed_info.update({'file_information': file_information})
     pdf_parsed_info.update({'presentation': presentation})
 
