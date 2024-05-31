@@ -1,6 +1,6 @@
 import pymupdf
 from openai import OpenAI
-import json
+import os
 
 client = OpenAI()
 
@@ -13,42 +13,54 @@ def get_decimal_to_rgb_color(color):
     red = int(color_hex[0:2], 16)
     green = int(color_hex[2:4], 16)
     blue = int(color_hex[4:6], 16)
+    return red, green, blue
 
-    # Combine into an RGB tuple
-    return (red, green, blue)
+
+def get_text_styling_info(doc):
+    fonts, font_color = set(), set()
+    for page in doc:
+        for block in page.get_text("dict")["blocks"]:
+            if block['type'] == 0:
+                for line in block.get("lines", []):
+                    for span in line["spans"]:
+                        fonts.add(span['font'])
+                        font_color.add(get_decimal_to_rgb_color(span['color']))
+    return fonts, font_color
 
 
 def get_content_from_pdf(file_path):
-    doc = pymupdf.open(file_path)
+    try:
+        doc = pymupdf.open(file_path)
+    except:
+        return {'status': 404}
+    finally:
+        os.remove(file_path)
+
     text = ''
     for page in doc:
         text += page.get_text()
-    fonts = set()
-    font_color = set()
-
-    for page in doc:
-        for block in page.get_text("dict")["blocks"]:
-            # print(block)
-            for line in block["lines"]:
-                for span in line["spans"]:
-                    fonts.add(span['font'])
-                    # print(span['color'])
-                    font_color.add(get_decimal_to_rgb_color(span['color']))
-
-    # print(fonts)
-    font_color_list = [[r, g, b] for r, g, b in font_color]
+    if not text:
+        return {'status': 404}
+    fonts, font_color = set(), set()
+    try:
+        fonts, font_color = get_text_styling_info(doc)
+    except:
+        pass
     presentation = {
         'page_count': doc.page_count,
         'word_count': len(text.split()),
         'fonts': list(fonts),
-        'font_color': font_color_list
+        'font_color': [[r, g, b] for r, g, b in font_color]
     }
-    # print(presentation)
-    return text, presentation
+    return {
+        'status': 200,
+        'text': text,
+        'presentation': presentation
+    }
 
 
 def generate_system_prompt():
-    prompt = """You are an exceptional HR professional assistant designed to extract and format valuable information from Curriculum Vitae (CV) into JSON.
+    prompt = """You are an exceptional HR professional assistant designed to extract and format valuable information based on the provided Curriculum Vitae (CV) into JSON format.
     You must strictly follow the following example JSON format.
     Example JSON:
     {
@@ -64,7 +76,8 @@ def generate_system_prompt():
           "github": ""
         }
       },
-      "sections": [list of sections in the CV (e.g. Contact information, Education, Professional experience, Skills, Awards, Certifications)],
+      "sections": [list of sections in the CV (e.g. Contact information, Profile Summary, Education, Professional experience, Skills, Awards, Certifications)],
+      "profile_summary": "Pluck the section from the CV if and only if the section is present in CV",
       "work_experience": {
         "number_of_jobs": "",
         "jobs_info": [
@@ -108,5 +121,6 @@ def get_formatted_resume_content(content):
 
 
 if __name__ == '__main__':
-    get_content_from_pdf('uploads/2b18ceb6-8aef-4289-b2bc-db2f94375733.pdf')
+    res = get_content_from_pdf('uploads/Yuvraj_Parmar_Resume_2023_v2.pdf')
+    print(res)
     # get_decimal_to_rgb_color(0)

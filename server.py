@@ -40,13 +40,14 @@ def create_upload_file(file: UploadFile):
     if file.content_type != 'application/pdf':
         return {
             "status": 415,
-            "message": "Please upload a pdf file.",
+            "message": "Unsupported Media Type",
         }
 
     file_information = {
         'file_name': file.filename,
-        'size': file.size,
-        'content_type': file.content_type
+        'file_size': file.size,
+        'content_type': file.content_type,
+        'file_name_length': len(file.filename) - 4
     }
 
     # directory for saving uploaded files
@@ -73,12 +74,21 @@ def create_upload_file(file: UploadFile):
     # Convert the timestamp to a readable date and time format
     file_information["modified_date"] = datetime.datetime.fromtimestamp(modification_time).strftime('%Y-%m-%d')
 
-    pdf_content, presentation = get_content_from_pdf(saved_filepath)
-    os.remove(saved_filepath)
+    res = get_content_from_pdf(saved_filepath)
+    if res['status'] != 200:
+        return {
+            'status': res['status']
+        }
+    try:
+        pdf_parsed_info = json.loads(get_formatted_resume_content(res['text']))
+    except:
+        return {'status': 404}
 
-    pdf_parsed_info = json.loads(get_formatted_resume_content(pdf_content))
-    # pdf_parsed_info = dict()
+    pdf_parsed_info["status"] = 200
+    try:
+        file_information["is_naming_same"] = bool(pdf_parsed_info["contact_information"]["name"] == file_information["file_name"])
+    except:
+        pass
     pdf_parsed_info.update({'file_information': file_information})
-    pdf_parsed_info.update({'presentation': presentation})
-
+    pdf_parsed_info.update({'presentation': res['presentation']})
     return pdf_parsed_info
