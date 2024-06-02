@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from util import get_content_from_pdf, get_formatted_resume_content
+from util import (get_content_from_pdf, get_formatted_resume_content,
+                  calculate_score)
 import uuid
 import shutil
 import os
@@ -44,8 +45,8 @@ def create_upload_file(file: UploadFile):
         }
 
     file_information = {
-        'file_name': file.filename,
-        'file_size': file.size,
+        'fileName': file.filename,
+        'size': file.size,
         'content_type': file.content_type,
         'file_name_length': len(file.filename) - 4
     }
@@ -66,6 +67,7 @@ def create_upload_file(file: UploadFile):
             shutil.copyfileobj(file.file, buffer)
     except Exception as e:
         return {
+            'status': 404,
             'message': 'File saving issue'
         }
 
@@ -77,7 +79,8 @@ def create_upload_file(file: UploadFile):
     res = get_content_from_pdf(saved_filepath)
     if res['status'] != 200:
         return {
-            'status': res['status']
+            'status': res['status'],
+            'message': 'Pdf file parsing issue'
         }
     try:
         pdf_parsed_info = json.loads(get_formatted_resume_content(res['text']))
@@ -86,9 +89,10 @@ def create_upload_file(file: UploadFile):
 
     pdf_parsed_info["status"] = 200
     try:
-        file_information["is_naming_same"] = bool(pdf_parsed_info["contact_information"]["name"] == file_information["file_name"])
+        file_information["is_naming_same"] = bool(pdf_parsed_info["contact_information"]["name"] == file_information["fileName"])
     except:
         pass
     pdf_parsed_info.update({'file_information': file_information})
     pdf_parsed_info.update({'presentation': res['presentation']})
+    pdf_parsed_info.update({'score_data': calculate_score(pdf_parsed_info)})
     return pdf_parsed_info

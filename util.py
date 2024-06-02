@@ -23,7 +23,13 @@ def get_text_styling_info(doc):
             if block['type'] == 0:
                 for line in block.get("lines", []):
                     for span in line["spans"]:
-                        fonts.add(span['font'])
+                        f = span['font']
+                        if f.split('-')[0] != f:
+                            fonts.add(f.split('-')[0])
+                        elif f.split('+')[0] != f:
+                            fonts.add(f.split('+')[0])
+                        else:
+                            fonts.add(f)
                         font_color.add(get_decimal_to_rgb_color(span['color']))
     return fonts, font_color
 
@@ -50,7 +56,7 @@ def get_content_from_pdf(file_path):
         'page_count': doc.page_count,
         'word_count': len(text.split()),
         'fonts': list(fonts),
-        'font_color': [[r, g, b] for r, g, b in font_color]
+        'colors': [[r, g, b] for r, g, b in font_color]
     }
     return {
         'status': 200,
@@ -61,13 +67,14 @@ def get_content_from_pdf(file_path):
 
 def generate_system_prompt():
     prompt = """You are an exceptional HR professional assistant designed to extract and format valuable information based on the provided Curriculum Vitae (CV) into JSON format.
-    You must strictly follow the following example JSON format.
+    You must strictly adhere to the following example JSON format and include all the fields. If data is not present, leave the fields empty and never make up something.
     Example JSON:
     {
       "contact_information": {
         "name": "",
         "phone": "",
         "email": "",
+        "address": "",
         "social_links": {
           "facebook": "",
           "twitter": "",
@@ -118,6 +125,198 @@ def get_formatted_resume_content(content):
         ]
     )
     return response.choices[0].message.content
+
+
+def calculate_score(obj):
+    checked, passed, failed = 0, 0, 0
+    # if filename and name is same
+    try:
+        if obj["file_information"]["is_naming_same"]:
+            # print(1)
+            passed += 1
+        else:
+            failed += 1
+        checked += 1
+    except:
+
+        pass
+    # is file type pdf
+    try:
+        if obj["file_information"]["content_type"] == "application/pdf":
+            # print(2)
+            passed += 1
+        else:
+            failed += 1
+        checked += 1
+    except:
+        pass
+
+    # file size 20KB to 1MB
+    try:
+        if 20 * 1024 <= obj["file_information"]["size"] <= 1024 * 1024:
+            # print(3)
+            passed += 1
+        else:
+            failed += 1
+        checked += 1
+    except:
+        pass
+    # greater than 3 section
+    try:
+        if len(obj["sections"]) >= 3:
+            # print(4)
+            passed += 1
+        else:
+            failed += 1
+        checked += 1
+    except:
+        pass
+    # page count less than or equal 2
+    try:
+        if obj["presentation"]["page_count"] <= 2:
+            # print(5)
+            passed += 1
+        else:
+            failed += 1
+        checked += 1
+    except:
+        pass
+    # 350 to 800 words
+    try:
+        if 350 <= obj["presentation"]["word_count"] <= 800:
+            # print(6)
+            passed += 1
+        else:
+            failed += 1
+        checked += 1
+    except:
+        pass
+    #  file name suggested maximum of 24 characters
+    try:
+        if obj["file_information"]["file_name_length"] <= 24:
+            # print(7)
+            passed += 1
+        else:
+            failed += 1
+        checked += 1
+    except:
+        pass
+    # name exist in resume
+    try:
+        if obj["contact_information"]["name"]:
+            # print(8)
+            passed += 1
+        else:
+            failed += 1
+        checked += 1
+    except:
+        pass
+    # email exist in resume
+    try:
+        if obj["contact_information"]["email"]:
+            # print(9)
+            passed += 1
+        else:
+            failed += 1
+        checked += 1
+    except:
+        pass
+    # phone exists
+    try:
+        if obj["contact_information"]["phone"]:
+            # print(10)
+            passed += 1
+        else:
+            failed += 1
+        checked += 1
+    except:
+        pass
+    # number_of_jobs > 0
+    try:
+        if int(obj["work_experience"]["number_of_jobs"]) > 0:
+            # print(11)
+            passed += 1
+        else:
+            failed += 1
+        checked += 1
+    except:
+        pass
+    # job title present
+    try:
+        if int(obj["work_experience"]["number_of_jobs"]) > 0:
+            jobs = obj["work_experience"]["jobs_info"]
+            # print(12)
+            if all(True if job["role"] else False for job in jobs):
+                passed += 1
+            else:
+                failed += 0
+            checked += 1
+    except:
+        pass
+    # profile summary exist
+    try:
+        if obj["profile_summary"]:
+            # print(13)
+            passed += 1
+        else:
+            failed += 1
+        checked += 1
+    except:
+        pass
+    # profile summary 50 to 80 words
+    try:
+        if obj["profile_summary"]:
+            if 50 <= len(obj["profile_summary"].split()) <= 80:
+                # print(14)
+                passed += 1
+            else:
+                failed += 1
+            checked += 1
+    except:
+        pass
+
+    # social link > 1
+    try:
+        social_links = obj["contact_information"]["social_links"]
+        cnt = sum(1 if value else 0 for _, value in social_links.items())
+        # print(15)
+        if cnt > 1:
+            passed += 1
+        else:
+            failed += 1
+        checked += 1
+    except:
+        pass
+    # education check
+    try:
+        educations = obj["education"]
+        if educations:
+            # print(16)
+            if all(True if education["degree"] else False for education in educations):
+                passed += 1
+            else:
+                failed += 1
+            checked += 1
+    except:
+        pass
+
+    # unique font must be 1
+    try:
+        fonts = obj["presentation"]["fonts"]
+        if len(fonts) == 1:
+            passed += 1
+        else:
+            failed += 1
+        checked += 1
+    except:
+        pass
+
+    return {
+        'checked': checked,
+        'passed': passed,
+        'failed': failed,
+        'score': int((passed / checked) * 100)
+    }
 
 
 if __name__ == '__main__':
