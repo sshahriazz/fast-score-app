@@ -90,7 +90,12 @@ def generate_system_prompt():
         "jobs_info": [
           {
             "role": "",
-            "organization": ""
+            "organization": "",
+            "bullet_point: {
+            "points": ["Information listed as bullet points if exists."],
+            "status": "good/bad based on bullet point writing quality if exists",
+            "suggestion": "How can be better if writing quality is not good and exists"
+            }
           }
         ]
       },
@@ -98,7 +103,12 @@ def generate_system_prompt():
         {
           "degree": "",
           "discipline": "",
-          "institute": ""
+          "institute": "",
+          "bullet_point: {
+            "points": ["Information listed as bullet points if exists."],
+            "status": "good/bad based on bullet point writing quality if exists",
+            "suggestion": "How can be better if writing quality is not good and exists"
+          }
         }
       ],
       "skills": {
