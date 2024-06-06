@@ -102,9 +102,9 @@ def generate_system_prompt():
         }
       ],
       "skills": {
-        "Soft Skills": [],
-        "Technical/Professional Skills": [],
-        "Other Skills": []
+        "soft_skills": [],
+        "technical/professional_skills": [],
+        "other_skills": []
       }
     }
     """
@@ -138,7 +138,6 @@ def calculate_score(obj):
             failed += 1
         checked += 1
     except:
-
         pass
     # is file type pdf
     try:
@@ -162,15 +161,15 @@ def calculate_score(obj):
     except:
         pass
     # greater than 3 section
-    try:
-        if len(obj["sections"]) >= 3:
-            # print(4)
-            passed += 1
-        else:
-            failed += 1
-        checked += 1
-    except:
-        pass
+    # try:
+    #     if len(obj["sections"]) >= 3:
+    #         # print(4)
+    #         passed += 1
+    #     else:
+    #         failed += 1
+    #     checked += 1
+    # except:
+    #     pass
     # page count less than or equal 2
     try:
         if obj["presentation"]["page_count"] <= 2:
@@ -191,17 +190,19 @@ def calculate_score(obj):
         checked += 1
     except:
         pass
-    #  file name suggested maximum of 24 characters
-    try:
-        if obj["file_information"]["file_name_length"] <= 24:
-            # print(7)
-            passed += 1
-        else:
-            failed += 1
-        checked += 1
-    except:
-        pass
+
+    # file name suggested maximum of 24 characters
+    # try:
+    #     if obj["file_information"]["file_name_length"] <= 24:
+    #         # print(7)
+    #         passed += 1
+    #     else:
+    #         failed += 1
+    #     checked += 1
+    # except:
+    #     pass
     # name exist in resume
+    
     try:
         if obj["contact_information"]["name"]:
             # print(8)
@@ -213,7 +214,7 @@ def calculate_score(obj):
         pass
     # email exist in resume
     try:
-        if obj["contact_information"]["email"]:
+        if obj["contact_information"]["email"] and '@' in obj["contact_information"]["email"]:
             # print(9)
             passed += 1
         else:
@@ -222,15 +223,15 @@ def calculate_score(obj):
     except:
         pass
     # phone exists
-    try:
-        if obj["contact_information"]["phone"]:
-            # print(10)
-            passed += 1
-        else:
-            failed += 1
-        checked += 1
-    except:
-        pass
+    # try:
+    #     if obj["contact_information"]["phone"]:
+    #         # print(10)
+    #         passed += 1
+    #     else:
+    #         failed += 1
+    #     checked += 1
+    # except:
+    #     pass
     # number_of_jobs > 0
     try:
         if int(obj["work_experience"]["number_of_jobs"]) > 0:
@@ -319,7 +320,7 @@ def calculate_score(obj):
     }
 
 
-if __name__ == '__main__':
-    res = get_content_from_pdf('uploads/Yuvraj_Parmar_Resume_2023_v2.pdf')
-    print(res)
-    # get_decimal_to_rgb_color(0)
+# if __name__ == '__main__':
+#     res = get_content_from_pdf('uploads/Yuvraj_Parmar_Resume_2023_v2.pdf')
+#     print(res)
+# get_decimal_to_rgb_color(0)

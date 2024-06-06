@@ -48,7 +48,7 @@ def create_upload_file(file: UploadFile):
         'fileName': file.filename,
         'size': file.size,
         'content_type': file.content_type,
-        'file_name_length': len(file.filename) - 4
+        'file_name_length': len(file.filename) - 4,
     }
 
     # directory for saving uploaded files
