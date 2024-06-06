@@ -85,9 +85,9 @@ def generate_system_prompt():
       },
       "sections": [list of sections in the CV (e.g. Contact information, Profile Summary, Education, Professional experience, Skills, Awards, Certifications)],
       "profile_summary": "Pluck the section from the CV if and only if the section is present in CV",
-      "work_experience": {
-        "number_of_jobs": "",
-        "jobs_info": [
+      "job_experience": {
+        "number_of_jobs": "Count of prior job experiences. Provide the exact number",
+        "list_of_each_job_detail": [
           {
             "role": "",
             "organization": "",
