@@ -2,7 +2,10 @@ import pymupdf
 from openai import OpenAI
 import os
 
-client = OpenAI()
+
+API_KEY = "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"
+
+client = OpenAI(api_key=API_KEY)
 
 
 def get_decimal_to_rgb_color(color):

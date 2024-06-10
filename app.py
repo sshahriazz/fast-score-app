@@ -1,291 +1,98 @@
-from fastapi import FastAPI, Request, UploadFile, HTTPException, status
+from fastapi import FastAPI, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from categorize_skills import skills_category
-from scanner.pdfanalyzer import find_social_media_links, find_degree, pdf_reader, find_summary, parse_resume_data, parse_resume_data, delete_files
-import aiofiles
+from util import (get_content_from_pdf, get_formatted_resume_content,
+                  calculate_score)
+import uuid
+import shutil
 import os
-import uvicorn
+import json
+import datetime
 
 app = FastAPI()
 
+# origins = [
+#     "http://localhost",
+#     "http://localhost:8000",
+#     "https://example.com",
+# ]
 origins = [
     "*"
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=origins,  # Allows specified origins
+    allow_credentials=True,  # Allows cookies to be included
+    allow_methods=["*"],  # Allows all HTTP methods
+    allow_headers=["*"],  # Allows all headers
 )
 
 
-@app.post("/")
-async def root(file: UploadFile):
+@app.get("/health")
+def health_check():
+    return {
+        "status": 200,
+        "message": "API is healthy."
+    }
 
-    if (file.content_type != "application/pdf"):
+
+@app.post("/uploadfile/")
+def create_upload_file(file: UploadFile):
+    if file.content_type != 'application/pdf':
         return {
-            "message": "Please upload a pdf file.",
+            "status": 415,
+            "message": "Unsupported Media Type",
+        }
+
+    file_information = {
+        'fileName': file.filename,
+        'size': file.size,
+        'content_type': file.content_type,
+        'file_name_length': len(file.filename) - 4,
+    }
+
+    # directory for saving uploaded files
+    saved_dir = "uploads/"
+
+    # Ensure the directory exists
+    if not os.path.exists(saved_dir):
+        os.makedirs(saved_dir)
+
+    filename = f'{str(uuid.uuid4())}.pdf'
+    saved_filepath = os.path.join(saved_dir, filename)
+
+    try:
+        # Efficiently save the file using shutil.copyfileobj()
+        with open(saved_filepath, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        return {
+            'status': 404,
+            'message': 'File saving issue'
+        }
+
+    modification_time = os.path.getmtime(saved_filepath)
+
+    # Convert the timestamp to a readable date and time format
+    file_information["modified_date"] = datetime.datetime.fromtimestamp(modification_time).strftime('%Y-%m-%d')
+
+    res = get_content_from_pdf(saved_filepath)
+    if res['status'] != 200:
+        return {
+            'status': res['status'],
+            'message': 'Pdf file parsing issue'
         }
     try:
-        filepath = os.path.join('./files', os.path.basename(file.filename))
-        async with aiofiles.open(filepath, 'wb') as f:
-            while chunk := await file.read(100):
-                await f.write(chunk)
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail='There was an error uploading the file')
-    finally:
-        await file.close()
+        pdf_parsed_info = json.loads(get_formatted_resume_content(res['text']))
+    except:
+        return {'status': 404}
 
-    filepath = os.path.join('./files', os.path.basename(file.filename))
-    file_information = {
-        "fileName": "",
-        "name": "",
-        "modified_date": "",
-        "size": 0,
-        "content_type": "",
-        "mod_gap": ""
-    }
-
-    presentation = {
-        "page_count": 0,
-        "word_count": 0,
-        "fonts": [],
-        "colors": [],
-    }
-
-    structure = {
-        "sections": [],
-        "contact_information": "",
-    }
-
-    contact_information = {
-        "name": "",
-        "phone": "",
-        "email": "",
-        "social_links": []
-    }
-
-    education = {
-        "degrees": [],
-        "skills": "",
-        "skills_category": {},
-    }
-    work_experience = {
-        "number_of_jobs": 0,
-        "job_titles": [],
-        "company": [],
-    }
-    score_data = {
-        "passed": 0,
-        "failed": 0,
-        "dismissed": 0,
-        "score": 0,
-        "tests": 0,
-        "score_history": []
-    }
-    summary = ""
-
-    creation_and_modification_date_difference = os.path.getctime(
-        filepath)
-
-    if (file):
-        file_information["fileName"] = file.filename
-        file_information["modified_date"] = ''
-        file_information["content_type"] = file.content_type
-        # in months
-        file_information["mod_gap"] = ''
-        file_information["size"] = round(float(file.size) / 1024 / 1024, 2)
-        file_information["content_type"] = file.content_type
-    data = pdf_reader(filepath)
-    presentation['page_count'] = data['page']
-    presentation['word_count'] = len(data['text'].split())
-
-    presentation['fonts'] = data['fonts']
-
-    presentation['colors'] = data['colors']
-
-    summary = find_summary(data['text'])
-
-    parsed_data = parse_resume_data(filepath)
-    selected_keys = []
-    for key, value in parsed_data.items():
-        if value is not None and value != "" and value != [] and value != 0.0:
-            selected_keys.append(key)
-    structure['sections'] = selected_keys
-
-    if parsed_data['designation'] is not None:
-        work_experience['number_of_jobs'] = len(parsed_data['designation'])
-    else:
-        work_experience['number_of_jobs'] = 0
-    work_experience['job_titles'] = parsed_data['designation']
-    work_experience['company'] = parsed_data['company_names']
-
-    if parsed_data['email'] is not None and parsed_data['mobile_number'] is not None and parsed_data['name'] is not None:
-        structure['contact_information'] = parsed_data['email'] + \
-            " " + parsed_data['mobile_number']
-
-    file_information['name'] = parsed_data['name']
-    find_degree(data['text'])
-    # form.clean()
-
-    # Contact Information
-    contact_information['name'] = parsed_data['name']
-    contact_information['phone'] = parsed_data['mobile_number']
-    contact_information['email'] = parsed_data['email']
-
-    contact_information["social_links"] = find_social_media_links(data['text'])
-
-    # Education
-    education['degrees'] = parsed_data['degree']
-    education['skills'] = parsed_data['skills']
-    education['skills_category'] = skills_category(parsed_data['skills'])
-
-    # calculate score based on presence and absent of data on the dict
-    if (file_information["name"]):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (file_information["content_type"]):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (file_information["size"]):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (file_information["mod_gap"]):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (presentation["page_count"] > 0):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (presentation["word_count"] > 350 and presentation["word_count"] < 800):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (len(presentation["fonts"]) > 1):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (len(presentation["colors"]) > 1):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (len(structure["sections"]) > 3):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (structure["contact_information"]):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (contact_information["name"]):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (contact_information["phone"]):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (contact_information["email"]):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (len(contact_information["social_links"]) > 0):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (education["degrees"]):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (education["skills"]):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (education["skills_category"]):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (work_experience["number_of_jobs"] > 0):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (work_experience["job_titles"] is not None):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (work_experience["company"]):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    if (summary):
-        score_data["passed"] += 1
-        score_data["score"] += 1
-    else:
-        score_data["failed"] += 1
-
-    score_data['tests'] = score_data["dismissed"] + \
-        score_data["failed"] + score_data["passed"]
-
-    os.unlink(filepath)
-
-    return {
-        "file_information": file_information,
-        "presentation": presentation,
-        "structure": structure,
-        "contact_information": contact_information,
-        "education": education,
-        "work_experience": work_experience,
-        "score_data": score_data,
-        "summary": summary,
-    }
-
-
-if __name__ == "__main__":
-    uvicorn.run(app, host='0.0.0.0', port=8000)
+    pdf_parsed_info["status"] = 200
+    try:
+        file_information["is_naming_same"] = bool(pdf_parsed_info["contact_information"]["name"] == file_information["fileName"])
+    except:
+        pass
+    pdf_parsed_info.update({'file_information': file_information})
+    pdf_parsed_info.update({'presentation': res['presentation']})
+    pdf_parsed_info.update({'score_data': calculate_score(pdf_parsed_info)})
+    return pdf_parsed_info
