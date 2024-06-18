@@ -6,6 +6,7 @@ WORKDIR /app
 
 # Copy the requirements file to the working directory
 COPY requirements.txt .
+COPY .env .
 
 # Install the Python dependencies
 RUN pip install -r requirements.txt
