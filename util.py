@@ -2,9 +2,15 @@ import pymupdf
 from openai import OpenAI
 import os
 
+from dotenv import load_dotenv
 
-API_KEY = "sk-proj-jFruYRvMQ3K6oXpythznT3BlbkFJ2MapZaxyalVnkkVZ6eTQ"
+load_dotenv()
 
+
+
+API_KEY = os.getenv('OPENAI_KEY')
+
+print("============",API_KEY)
 client = OpenAI(api_key=API_KEY)
 
 
