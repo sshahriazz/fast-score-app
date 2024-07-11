@@ -10,7 +10,6 @@ load_dotenv()
 
 API_KEY = os.getenv('OPENAI_KEY')
 
-print("============",API_KEY)
 client = OpenAI(api_key=API_KEY)
 
 
@@ -95,36 +94,29 @@ def generate_system_prompt():
       "sections": [list of sections in the CV (e.g. Contact information, Profile Summary, Education, Professional experience, Skills, Awards, Certifications)],
       "profile_summary": "Pluck the section from the CV if and only if the section is present in CV",
       "work_experience": {
-        "number_of_jobs": "",
+        "number_of_jobs": "its the number of work_experiences it has to be accurate, count only inside the Professional experience work experience section, then the number of jobs is 0",
         "jobs_info": [
           {
             "role": "",
             "organization": "",
-            "bullet_point: {
-            "points": ["Information listed as bullet points if exists."],
-            "status": "good/bad based on bullet point writing quality if exists",
-            "suggestion": "How can be better if writing quality is not good and exists"
-            }
           }
         ]
       },
       "education": [
         {
           "degree": "",
-          "discipline": "",
+          "discipline": "if degree is not present, then discipline is the main field of study",
           "institute": "",
-          "bullet_point: {
-            "points": ["Information listed as bullet points if exists."],
-            "status": "good/bad based on bullet point writing quality if exists",
-            "suggestion": "How can be better if writing quality is not good and exists"
-          }
         }
       ],
       "skills": {
         "soft_skills": [],
         "technical/professional_skills": [],
         "other_skills": []
-      }
+      },
+      "suggestions": [areas of improvement based on the extracted resume information specially check if the grammar, tone, professionalism, and writing quality is good or not return each suggestion as a separate string in the list],
+      ,
+      "score": {"value": count the score based on the overall cv/resume quality. value must be in between 0 to 10, "expertise_level": "Beginner/Intermediate/Expert based on the quality of the extracted information"}
     }
     """
     return prompt
@@ -146,197 +138,197 @@ def get_formatted_resume_content(content):
     return response.choices[0].message.content
 
 
-def calculate_score(obj):
-    checked, passed, failed = 0, 0, 0
-    # if filename and name is same
-    try:
-        if obj["file_information"]["is_naming_same"]:
-            # print(1)
-            passed += 1
-        else:
-            failed += 1
-        checked += 1
-    except:
-        pass
-    # is file type pdf
-    try:
-        if obj["file_information"]["content_type"] == "application/pdf":
-            # print(2)
-            passed += 1
-        else:
-            failed += 1
-        checked += 1
-    except:
-        pass
+# def calculate_score(obj):
+#     checked, passed, failed = 0, 0, 0
+#     # if filename and name is same
+#     try:
+#         if obj["file_information"]["is_naming_same"]:
+#             # print(1)
+#             passed += 1
+#         else:
+#             failed += 1
+#         checked += 1
+#     except:
+#         pass
+#     # is file type pdf
+#     try:
+#         if obj["file_information"]["content_type"] == "application/pdf":
+#             # print(2)
+#             passed += 1
+#         else:
+#             failed += 1
+#         checked += 1
+#     except:
+#         pass
 
-    # file size 20KB to 1MB
-    try:
-        if 20 * 1024 <= obj["file_information"]["size"] <= 1024 * 1024:
-            # print(3)
-            passed += 1
-        else:
-            failed += 1
-        checked += 1
-    except:
-        pass
-    # greater than 3 section
-    # try:
-    #     if len(obj["sections"]) >= 3:
-    #         # print(4)
-    #         passed += 1
-    #     else:
-    #         failed += 1
-    #     checked += 1
-    # except:
-    #     pass
-    # page count less than or equal 2
-    try:
-        if obj["presentation"]["page_count"] <= 2:
-            # print(5)
-            passed += 1
-        else:
-            failed += 1
-        checked += 1
-    except:
-        pass
-    # 350 to 800 words
-    try:
-        if 350 <= obj["presentation"]["word_count"] <= 800:
-            # print(6)
-            passed += 1
-        else:
-            failed += 1
-        checked += 1
-    except:
-        pass
+#     # file size 20KB to 1MB
+#     try:
+#         if 20 * 1024 <= obj["file_information"]["size"] <= 1024 * 1024:
+#             # print(3)
+#             passed += 1
+#         else:
+#             failed += 1
+#         checked += 1
+#     except:
+#         pass
+#     # greater than 3 section
+#     # try:
+#     #     if len(obj["sections"]) >= 3:
+#     #         # print(4)
+#     #         passed += 1
+#     #     else:
+#     #         failed += 1
+#     #     checked += 1
+#     # except:
+#     #     pass
+#     # page count less than or equal 2
+#     try:
+#         if obj["presentation"]["page_count"] <= 2:
+#             # print(5)
+#             passed += 1
+#         else:
+#             failed += 1
+#         checked += 1
+#     except:
+#         pass
+#     # 350 to 800 words
+#     try:
+#         if 350 <= obj["presentation"]["word_count"] <= 800:
+#             # print(6)
+#             passed += 1
+#         else:
+#             failed += 1
+#         checked += 1
+#     except:
+#         pass
 
-    # file name suggested maximum of 24 characters
-    # try:
-    #     if obj["file_information"]["file_name_length"] <= 24:
-    #         # print(7)
-    #         passed += 1
-    #     else:
-    #         failed += 1
-    #     checked += 1
-    # except:
-    #     pass
-    # name exist in resume
+#     # file name suggested maximum of 24 characters
+#     # try:
+#     #     if obj["file_information"]["file_name_length"] <= 24:
+#     #         # print(7)
+#     #         passed += 1
+#     #     else:
+#     #         failed += 1
+#     #     checked += 1
+#     # except:
+#     #     pass
+#     # name exist in resume
     
-    try:
-        if obj["contact_information"]["name"]:
-            # print(8)
-            passed += 1
-        else:
-            failed += 1
-        checked += 1
-    except:
-        pass
-    # email exist in resume
-    try:
-        if obj["contact_information"]["email"] and '@' in obj["contact_information"]["email"]:
-            # print(9)
-            passed += 1
-        else:
-            failed += 1
-        checked += 1
-    except:
-        pass
-    # phone exists
-    # try:
-    #     if obj["contact_information"]["phone"]:
-    #         # print(10)
-    #         passed += 1
-    #     else:
-    #         failed += 1
-    #     checked += 1
-    # except:
-    #     pass
-    # number_of_jobs > 0
-    try:
-        if int(obj["work_experience"]["number_of_jobs"]) > 0:
-            # print(11)
-            passed += 1
-        else:
-            failed += 1
-        checked += 1
-    except:
-        pass
-    # job title present
-    try:
-        if int(obj["work_experience"]["number_of_jobs"]) > 0:
-            jobs = obj["work_experience"]["jobs_info"]
-            # print(12)
-            if all(True if job["role"] else False for job in jobs):
-                passed += 1
-            else:
-                failed += 0
-            checked += 1
-    except:
-        pass
-    # profile summary exist
-    try:
-        if obj["profile_summary"]:
-            # print(13)
-            passed += 1
-        else:
-            failed += 1
-        checked += 1
-    except:
-        pass
-    # profile summary 50 to 80 words
-    try:
-        if obj["profile_summary"]:
-            if 50 <= len(obj["profile_summary"].split()) <= 80:
-                # print(14)
-                passed += 1
-            else:
-                failed += 1
-            checked += 1
-    except:
-        pass
+#     try:
+#         if obj["contact_information"]["name"]:
+#             # print(8)
+#             passed += 1
+#         else:
+#             failed += 1
+#         checked += 1
+#     except:
+#         pass
+#     # email exist in resume
+#     try:
+#         if obj["contact_information"]["email"] and '@' in obj["contact_information"]["email"]:
+#             # print(9)
+#             passed += 1
+#         else:
+#             failed += 1
+#         checked += 1
+#     except:
+#         pass
+#     # phone exists
+#     # try:
+#     #     if obj["contact_information"]["phone"]:
+#     #         # print(10)
+#     #         passed += 1
+#     #     else:
+#     #         failed += 1
+#     #     checked += 1
+#     # except:
+#     #     pass
+#     # number_of_jobs > 0
+#     try:
+#         if int(obj["work_experience"]["number_of_jobs"]) > 0:
+#             # print(11)
+#             passed += 1
+#         else:
+#             failed += 1
+#         checked += 1
+#     except:
+#         pass
+#     # job title present
+#     try:
+#         if int(obj["work_experience"]["number_of_jobs"]) > 0:
+#             jobs = obj["work_experience"]["jobs_info"]
+#             # print(12)
+#             if all(True if job["role"] else False for job in jobs):
+#                 passed += 1
+#             else:
+#                 failed += 0
+#             checked += 1
+#     except:
+#         pass
+#     # profile summary exist
+#     try:
+#         if obj["profile_summary"]:
+#             # print(13)
+#             passed += 1
+#         else:
+#             failed += 1
+#         checked += 1
+#     except:
+#         pass
+#     # profile summary 50 to 80 words
+#     try:
+#         if obj["profile_summary"]:
+#             if 50 <= len(obj["profile_summary"].split()) <= 80:
+#                 # print(14)
+#                 passed += 1
+#             else:
+#                 failed += 1
+#             checked += 1
+#     except:
+#         pass
 
-    # social link > 1
-    try:
-        social_links = obj["contact_information"]["social_links"]
-        cnt = sum(1 if value else 0 for _, value in social_links.items())
-        # print(15)
-        if cnt > 1:
-            passed += 1
-        else:
-            failed += 1
-        checked += 1
-    except:
-        pass
-    # education check
-    try:
-        educations = obj["education"]
-        if educations:
-            # print(16)
-            if all(True if education["degree"] else False for education in educations):
-                passed += 1
-            else:
-                failed += 1
-            checked += 1
-    except:
-        pass
+#     # social link > 1
+#     try:
+#         social_links = obj["contact_information"]["social_links"]
+#         cnt = sum(1 if value else 0 for _, value in social_links.items())
+#         # print(15)
+#         if cnt > 1:
+#             passed += 1
+#         else:
+#             failed += 1
+#         checked += 1
+#     except:
+#         pass
+#     # education check
+#     try:
+#         educations = obj["education"]
+#         if educations:
+#             # print(16)
+#             if all(True if education["degree"] else False for education in educations):
+#                 passed += 1
+#             else:
+#                 failed += 1
+#             checked += 1
+#     except:
+#         pass
 
-    # unique font must be 1
-    try:
-        fonts = obj["presentation"]["fonts"]
-        if len(fonts) == 1:
-            passed += 1
-        else:
-            failed += 1
-        checked += 1
-    except:
-        pass
+#     # unique font must be 1
+#     try:
+#         fonts = obj["presentation"]["fonts"]
+#         if len(fonts) == 1:
+#             passed += 1
+#         else:
+#             failed += 1
+#         checked += 1
+#     except:
+#         pass
 
-    return {
-        'checked': checked,
-        'passed': passed,
-        'failed': failed,
-        'score': int((passed / checked) * 100)
-    }
+#     return {
+#         'checked': checked,
+#         'passed': passed,
+#         'failed': failed,
+#         'score': int((passed / checked) * 100)
+#     }
 
 
 # if __name__ == '__main__':

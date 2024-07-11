@@ -1,7 +1,6 @@
 from fastapi import FastAPI, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from util import (get_content_from_pdf, get_formatted_resume_content,
-                  calculate_score)
+from util import (get_content_from_pdf, get_formatted_resume_content)
 import uuid
 import shutil
 import os
@@ -94,5 +93,5 @@ def create_upload_file(file: UploadFile):
         pass
     pdf_parsed_info.update({'file_information': file_information})
     pdf_parsed_info.update({'presentation': res['presentation']})
-    pdf_parsed_info.update({'score_data': calculate_score(pdf_parsed_info)})
+    # pdf_parsed_info.update({'score_data': calculate_score(pdf_parsed_info)})
     return pdf_parsed_info
